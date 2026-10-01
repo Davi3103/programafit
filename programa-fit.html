@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Programa Fit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: painel de laboratório — cabeçalho fixo com abas, cartões só onde há dados, números em fonte mono como num laudo */
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --surface-2:#E8EEEA; --line:#D3DDD7;
+  --ink:#13211B; --muted:#5A6B63; --accent:#17694F; --accent-soft:#D6EBE2; --on-accent:#FFFFFF;
+  --prot:#C2531B; --carb:#2D62C8; --fat:#B7860B; --fib:#6A4BB5; --water:#1C8BA6;
+  --good:#1E8A4F; --bad:#C23B3B;
+  --f-display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --f-body:"Figtree","Segoe UI",system-ui,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1513; --surface:#151E1B; --surface-2:#1C2824; --line:#2A3833;
+  --ink:#E4EDE8; --muted:#94A69E; --accent:#4FC297; --accent-soft:#1C3A2F; --on-accent:#08130F;
+  --prot:#F0844D; --carb:#6E9BF2; --fat:#E2B53C; --fib:#A68CEB; --water:#4CB9D3;
+  --good:#4CC27E; --bad:#F07070; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0E1513; --surface:#151E1B; --surface-2:#1C2824; --line:#2A3833;
+  --ink:#E4EDE8; --muted:#94A69E; --accent:#4FC297; --accent-soft:#1C3A2F; --on-accent:#08130F;
+  --prot:#F0844D; --carb:#6E9BF2; --fat:#E2B53C; --fib:#A68CEB; --water:#4CB9D3;
+  --good:#4CC27E; --bad:#F07070; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:12px 0;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand h1{font:800 22px/1 var(--f-display);letter-spacing:-.01em;margin:0}
+.brand h1 span{color:var(--accent)}
+.sync{font-size:12px;color:var(--muted)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs button{flex:0 0 auto;border:0;background:none;color:var(--muted);font:600 14px var(--f-body);padding:8px 12px 10px;border-bottom:3px solid transparent;cursor:pointer}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font:700 19px/1.2 var(--f-display);margin:0;text-wrap:balance}
+h3{font:700 15px/1.2 var(--f-display);margin:0}
+.sec{display:flex;flex-direction:column;gap:16px;padding-top:20px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.muted{color:var(--muted)} .small{font-size:13px}
+.lbl{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input.n{font-family:var(--f-num);text-align:right}
+textarea{width:100%;min-height:64px;resize:vertical}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--f-body);padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.ghost{border-color:transparent;background:none;color:var(--muted);padding:6px 8px}
+.btn.ghost:hover{color:var(--bad)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.sm{padding:5px 10px;font-size:13px}
+
+/* resumo do dia */
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.meter{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:6px}
+.meter.big{border-color:var(--prot)}
+.meter .v{font:600 22px/1.1 var(--f-num);font-variant-numeric:tabular-nums}
+.meter .v small{font-size:13px;color:var(--muted);font-weight:400}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:4px;background:var(--c,var(--accent));transition:width .3s}
+.bar.over i{background:var(--bad)}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:6px;vertical-align:1px}
+
+.datenav{display:flex;gap:6px;align-items:center}
+.datenav input{font-family:var(--f-num)}
+.addbar{display:grid;grid-template-columns:minmax(130px,1fr) minmax(180px,2fr) 110px auto;gap:8px;align-items:end}
+.addbar label{display:flex;flex-direction:column;gap:4px}
+@media (max-width:640px){.addbar{grid-template-columns:1fr 1fr}.addbar .wide{grid-column:1/-1}}
+.notice{font-size:13px;padding:8px 12px;border-radius:8px;background:var(--accent-soft);color:var(--ink)}
+
+.tscroll{overflow-x:auto;margin-inline:-4px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:6px;border-bottom:1px solid var(--surface-2);text-align:right;white-space:nowrap}
+td.num,td .num{font-family:var(--f-num)}
+tfoot td{font-weight:600;border-bottom:0;border-top:1px solid var(--line)}
+td input.n{width:78px;padding:5px 7px}
+td input.t{width:100%;min-width:180px;padding:5px 7px}
+td.p{color:var(--prot);font-weight:600}
+.meal-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.meal-h .tot{font-size:13px;color:var(--muted)}
+.meal-h .tot b{color:var(--prot);font-family:var(--f-num)}
+.empty{color:var(--muted);font-size:13px;padding:4px 0}
+
+/* exame */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 12px;font:500 13px var(--f-num);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field .in{display:flex;align-items:center;gap:6px}
+.field .in input,.field .in select{flex:1;width:100%}
+.field .u{font-size:12px;color:var(--muted);min-width:34px}
+.field .calc{font-size:12px;color:var(--muted);min-height:16px}
+.delta.good{color:var(--good)} .delta.bad{color:var(--bad)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kv div{display:flex;flex-direction:column;gap:2px}
+.kv b{font:600 20px var(--f-num)}
+.kv b.p{color:var(--prot)}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.chart svg{width:100%;height:auto;display:block}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:2.2}
+.chart .ar{fill:var(--accent-soft)}
+.chart .gd{stroke:var(--line);stroke-width:1}
+.chart text{fill:var(--muted);font:11px var(--f-num)}
+.chart .pt{fill:var(--accent)}
+.chart .bp{fill:var(--prot)} .chart .bk{fill:var(--carb);opacity:.85}
+.chart .meta{stroke:var(--ink);stroke-dasharray:4 3;stroke-width:1.3}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.disc{font-size:12.5px;color:var(--muted);max-width:70ch}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><h1>Programa <span>Fit</span></h1><span class="sync" id="sync">Carregando…</span></div>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button data-tab="hoje" role="tab">Diário</button>
+    <button data-tab="bio" role="tab">Bioimpedância</button>
+    <button data-tab="metas" role="tab">Metas</button>
+    <button data-tab="alimentos" role="tab">Alimentos</button>
+    <button data-tab="evolucao" role="tab">Evolução</button>
+  </nav>
+</div></header>
+<main class="wrap" id="app"></main>
+<datalist id="foodlist"></datalist>
+
+<script>
+(function(){
+"use strict";
+/* ---------- utilidades ---------- */
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const num=v=>{if(v===null||v===undefined||v==='')return null;const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
+const fmt=(n,d=0)=>n===null||n===undefined||!isFinite(n)?'—':n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const todayISO=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+const brDate=iso=>iso?iso.split('-').reverse().join('/'):'—';
+const shortDate=iso=>iso?iso.slice(8,10)+'/'+iso.slice(5,7):'';
+
+const MEALS=[['cafe','Café da manhã'],['lanche1','Lanche da manhã'],['almoco','Almoço'],['lanche2','Lanche da tarde'],['jantar','Jantar'],['ceia','Ceia']];
+const ATIV=[[1.2,'Sedentário (pouco ou nenhum exercício)'],[1.375,'Leve (treino 1–3x/semana)'],[1.55,'Moderado (treino 3–5x/semana)'],[1.725,'Intenso (treino 6–7x/semana)'],[1.9,'Muito intenso (2 treinos/dia ou trabalho físico)']];
+const EXF=[
+ ['peso','Peso','kg'],['gordPct','Gordura corporal','%'],['gordKg','Massa de gordura','kg'],
+ ['magraKg','Massa magra (livre de gordura)','kg'],['muscKg','Massa muscular esquelética','kg'],['aguaPct','Água corporal total','%'],
+ ['proteinaKg','Proteína corporal','kg'],['minerais','Minerais','kg'],['ossea','Massa óssea','kg'],
+ ['visceral','Gordura visceral','nível'],['tmb','Taxa metabólica basal (TMB)','kcal'],['idadeMet','Idade metabólica','anos']
+];
+/* valores aproximados por 100 g (TACO / rótulos comuns) */
+const DEFAULT_FOODS=[
+ ['Peito de frango grelhado',100,159,32,0,2.5,0],['Patinho bovino grelhado',100,219,35.9,0,7.3,0],['Tilápia grelhada',120,128,26.2,0,2.7,0],
+ ['Salmão grelhado',120,206,22,0,12.4,0],['Atum em lata (em água)',60,116,25.5,0,0.8,0],['Ovo inteiro cozido',50,146,13.3,0.6,9.5,0],
+ ['Clara de ovo',33,52,10.9,0.7,0.2,0],['Whey protein concentrado (confira o rótulo)',30,400,80,8,6,0],['Queijo cottage',50,98,11.1,3.4,4.3,0],
+ ['Iogurte natural desnatado',170,41,3.8,5.8,0.3,0],['Leite desnatado',200,35,3.4,4.9,0.1,0],['Arroz branco cozido',100,128,2.5,28.1,0.2,1.6],
+ ['Arroz integral cozido',100,124,2.6,25.8,1,2.7],['Feijão carioca cozido',80,76,4.8,13.6,0.5,8.5],['Batata-doce cozida',150,77,0.6,18.4,0.1,2.2],
+ ['Mandioca cozida',100,125,0.6,30.1,0.3,1.6],['Aveia em flocos',30,394,13.9,66.6,8.5,9.1],['Pão francês',50,300,8,58.6,3.1,2.3],
+ ['Pão integral',50,253,9.4,49.9,3.7,6.9],['Banana prata',86,98,1.3,26,0.1,2],['Maçã',130,56,0.3,15.2,0,1.3],
+ ['Brócolis cozido',80,25,2.1,4.4,0.5,3.4],['Alface crespa',30,11,1.3,1.7,0.2,1.8],['Tomate',80,15,1.1,3.1,0.2,1.2],
+ ['Azeite de oliva',8,884,0,0,100,0],['Pasta de amendoim',15,588,25,20,50,6]
+].map(([nome,porcao,kcal,prot,carb,gord,fibra])=>({id:uid(),nome,porcao,kcal,prot,carb,gord,fibra}));
+
+const newExam=()=>({id:uid(),data:todayISO(),extras:[],obs:''});
+const defaults=()=>({
+  settings:{sexo:'M',idade:'',altura:'',atividade:1.55,deficit:20,protGkg:2.0,protBase:'peso',gordGkg:0.8,fibraMeta:30,aguaMlkg:35,kcalManual:'',protManual:'',refeicoes:5},
+  exams:[newExam()], foods:DEFAULT_FOODS, updatedAt:0
+});
+
+/* ---------- estado ---------- */
+let P=defaults();      // perfil: settings, exams, foods
+let DAYS={};           // 'YYYY-MM-DD' -> {entries:[], agua:0}
+const ui={tab:'hoje',date:todayISO(),exam:null,filter:'',confirm:null,msg:''};
+try{const t=localStorage.getItem('pf_tab');if(t)ui.tab=t}catch(e){}
+
+/* ---------- armazenamento (nuvem privada por usuário, com cópia local) ---------- */
+const store={mode:'local',col:null,timers:{},chains:{},
+  loadLocal(){try{const p=JSON.parse(localStorage.getItem('pf_perfil')||'null');if(p&&p.settings)P=Object.assign(defaults(),p);
+    const d=JSON.parse(localStorage.getItem('pf_days')||'null');if(d)DAYS=d}catch(e){}},
+  saveLocal(){try{localStorage.setItem('pf_perfil',JSON.stringify(P));localStorage.setItem('pf_days',JSON.stringify(DAYS))}catch(e){}},
+  async init(){
+    try{
+      const c=window.claude; if(!c||!c.use) return this.status();
+      const db=await c.use('db'); const u=await c.use('user'); const id=u?await u.id():null;
+      if(!db||!id) return this.status();
+      this.col=db.collection('data/users/'+id); this.mode='cloud';
+      const snap=await this.col.get(); let cloudP=null; const cloudD={};
+      snap.docs.forEach(d=>{const v=d.data(); if(d.id==='perfil')cloudP=v; else if(d.id.startsWith('d-'))cloudD[d.id.slice(2)]=v;});
+      if(cloudP&&(cloudP.updatedAt||0)>=(P.updatedAt||0)){P=Object.assign(defaults(),cloudP);}
+      else if(P.updatedAt){this.save('perfil');}
+      Object.entries(DAYS).forEach(([k,v])=>{if(!cloudD[k]&&v.entries&&v.entries.length)this.save('d-'+k)});
+      Object.assign(DAYS,cloudD);
+      this.saveLocal(); render();
+    }catch(e){this.mode='local'}
+    this.status();
+  },
+  status(t){const el=$('#sync'); if(!el)return;
+    el.textContent=t||(this.mode==='cloud'?'Salvo na sua conta':'Salvo neste navegador');},
+  save(key){
+    if(key==='perfil')P.updatedAt=Date.now();
+    this.saveLocal();
+    if(this.mode!=='cloud')return this.status();
+    this.status('Salvando…');
+    clearTimeout(this.timers[key]);
+    this.timers[key]=setTimeout(()=>{
+      const body=key==='perfil'?JSON.parse(JSON.stringify(P)):JSON.parse(JSON.stringify(DAYS[key.slice(2)]||{entries:[],agua:0}));
+      const prev=this.chains[key]||Promise.resolve();
+      this.chains[key]=prev.then(()=>this.col.doc(key).set(body)).then(()=>this.status()).catch(err=>{
+        this.status(err&&err.code==='quota_exceeded'?'Espaço cheio — apague dias antigos':'Salvo neste navegador (sem conexão)');});
+    },700);
+  }
+};
+const savePerfil=()=>store.save('perfil');
+const saveDay=()=>store.save('d-'+ui.date);
+const day=(iso=ui.date)=>DAYS[iso]||(DAYS[iso]={entries:[],agua:0});
+
+/* ---------- cálculos ---------- */
+function examsSorted(){return P.exams.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''))}
+function latestExam(){const l=examsSorted().filter(e=>num(e.peso));return l[l.length-1]||null}
+function examDerived(e){
+  const s=P.settings, peso=num(e&&e.peso), alt=num(s.altura);
+  let gk=num(e&&e.gordKg), gp=num(e&&e.gordPct), mm=num(e&&e.magraKg);
+  if(gk===null&&peso&&gp!==null)gk=peso*gp/100;
+  if(gp===null&&peso&&gk!==null)gp=gk/peso*100;
+  if(mm===null&&peso&&gk!==null)mm=peso-gk;
+  const imc=peso&&alt?peso/Math.pow(alt/100,2):null;
+  return{peso,gk,gp,mm,imc,musc:num(e&&e.muscKg)};
+}
+function calc(){
+  const s=P.settings, e=latestExam(), d=examDerived(e);
+  const alt=num(s.altura), idade=num(s.idade);
+  let tmb=null, fonte='';
+  if(e&&num(e.tmb)){tmb=num(e.tmb);fonte='valor do exame'}
+  else if(d.mm){tmb=370+21.6*d.mm;fonte='Katch-McArdle (massa magra)'}
+  else if(d.peso&&alt&&idade){tmb=10*d.peso+6.25*alt-5*idade+(s.sexo==='F'?-161:5);fonte='Mifflin-St Jeor'}
+  const get=tmb?tmb*num(s.atividade):null;
+  const kcal=num(s.kcalManual)||(get?Math.round(get*(1-(num(s.deficit)||0)/100)):null);
+  const baseKg=s.protBase==='magra'&&d.mm?d.mm:d.peso;
+  const prot=num(s.protManual)||(baseKg?Math.round(baseKg*(num(s.protGkg)||0)):null);
+  const gord=d.peso?Math.round(d.peso*(num(s.gordGkg)||0)):null;
+  const carb=kcal&&prot!==null&&gord!==null?Math.max(0,Math.round((kcal-prot*4-gord*9)/4)):null;
+  const agua=d.peso?Math.round(d.peso*(num(s.aguaMlkg)||0)):null;
+  return{e,d,tmb,fonte,get,kcal,prot,gord,carb,fibra:num(s.fibraMeta),agua,refs:num(s.refeicoes)||5};
+}
+function foodById(id){return P.foods.find(f=>f.id===id)}
+function entryMacros(en){
+  const f=foodById(en.foodId)||en.per||{}; const g=num(en.g)||0, k=g/100;
+  return{nome:(foodById(en.foodId)||{}).nome||en.nome,kcal:(num(f.kcal)||0)*k,prot:(num(f.prot)||0)*k,carb:(num(f.carb)||0)*k,gord:(num(f.gord)||0)*k,fibra:(num(f.fibra)||0)*k};
+}
+function sumEntries(list){const t={kcal:0,prot:0,carb:0,gord:0,fibra:0};list.forEach(en=>{const m=entryMacros(en);for(const k in t)t[k]+=m[k]});return t}
+
+/* ---------- saídas que atualizam sem redesenhar ---------- */
+function refresh(){
+  const c=calc(), o={}, bars={};
+  const dd=day(), tot=sumEntries(dd.entries);
+  const M=[['kcal','kcal',0],['prot','prot',0],['carb','carb',0],['gord','gord',0],['fibra','fibra',0]];
+  M.forEach(([k,mk])=>{const meta=c[mk];o['t.'+k]=fmt(tot[k]);o['m.'+k]=meta?fmt(meta):'—';
+    const left=meta?meta-tot[k]:null;
+    o['l.'+k]=meta===null?'Defina a meta':left>=0?'Faltam '+fmt(left)+(k==='kcal'?' kcal':' g'):'Passou '+fmt(-left)+(k==='kcal'?' kcal':' g');
+    bars[k]=meta?{w:Math.min(100,tot[k]/meta*100),over:k!=='prot'&&k!=='fibra'&&tot[k]>meta*1.05}:{w:0}});
+  o['pkg']=c.d.peso?fmt(tot.prot/c.d.peso,2):'—'; o['pmm']=c.d.mm?fmt(tot.prot/c.d.mm,2):'—';
+  o['agua.t']=fmt(num(dd.agua)||0); o['agua.m']=c.agua?fmt(c.agua):'—';
+  bars['agua']=c.agua?{w:Math.min(100,(num(dd.agua)||0)/c.agua*100)}:{w:0};
+  dd.entries.forEach(en=>{const m=entryMacros(en);['kcal','prot','carb','gord'].forEach(k=>o['e.'+en.id+'.'+k]=fmt(m[k],k==='kcal'?0:1))});
+  MEALS.forEach(([mk])=>{const t=sumEntries(dd.entries.filter(x=>x.meal===mk));o['ml.'+mk+'.prot']=fmt(t.prot,1);o['ml.'+mk+'.kcal']=fmt(t.kcal)});
+  ['kcal','prot','carb','gord'].forEach(k=>o['ft.'+k]=fmt(tot[k],k==='kcal'?0:1));
+  // exame
+  P.exams.forEach(e=>{const d=examDerived(e);o['x.'+e.id+'.imc']=d.imc?'IMC '+fmt(d.imc,1):'';
+    o['x.'+e.id+'.gk']=num(e.gordKg)===null&&d.gk!==null?'Calculado: '+fmt(d.gk,1)+' kg':'';
+    o['x.'+e.id+'.gp']=num(e.gordPct)===null&&d.gp!==null?'Calculado: '+fmt(d.gp,1)+' %':'';
+    o['x.'+e.id+'.mm']=num(e.magraKg)===null&&d.mm!==null?'Calculado: '+fmt(d.mm,1)+' kg':'';});
+  // metas
+  o['c.tmb']=c.tmb?fmt(c.tmb):'—'; o['c.fonte']=c.fonte||'Preencha peso + altura + idade, ou massa magra, ou TMB do exame';
+  o['c.get']=c.get?fmt(c.get):'—'; o['c.kcal']=c.kcal?fmt(c.kcal):'—'; o['c.prot']=c.prot?fmt(c.prot):'—';
+  o['c.gord']=c.gord?fmt(c.gord):'—'; o['c.carb']=c.carb!==null?fmt(c.carb):'—'; o['c.agua']=c.agua?fmt(c.agua/1000,1):'—';
+  o['c.pref']=c.prot?fmt(c.prot/c.refs):'—'; o['c.refsTxt']=fmt(c.refs);
+  const pct=(g,f)=>c.kcal&&g!==null?fmt(g*f/c.kcal*100)+'% das kcal':'';
+  o['c.prot%']=pct(c.prot,4); o['c.gord%']=pct(c.gord,9); o['c.carb%']=pct(c.carb,4);
+  o['c.def']=c.get&&c.kcal?fmt(c.get-c.kcal)+' kcal/dia abaixo do gasto':'';
+  o['c.semana']=c.get&&c.kcal?'≈ '+fmt((c.get-c.kcal)*7/7700,2)+' kg de gordura por semana':'';
+  o['c.pkgmm']=c.prot&&c.d.mm?fmt(c.prot/c.d.mm,2)+' g/kg de massa magra':''; o['c.pkg']=c.prot&&c.d.peso?fmt(c.prot/c.d.peso,2)+' g/kg de peso':'';
+  o['c.base']=c.e?'Usando o exame de '+brDate(c.e.data)+' · '+fmt(c.d.peso,1)+' kg':'Nenhum exame com peso ainda — preencha a aba Bioimpedância';
+  document.querySelectorAll('[data-out]').forEach(el=>{const v=o[el.dataset.out];el.textContent=v===undefined?'—':v});
+  document.querySelectorAll('[data-bar]').forEach(el=>{const b=bars[el.dataset.bar]||{w:0};el.firstElementChild.style.width=b.w+'%';el.classList.toggle('over',!!b.over)});
+}
+
+/* ---------- telas ---------- */
+const field=(attrs,val,unit,label,calcKey,type='text')=>`<label class="field"><span class="lbl">${label}</span><span class="in">
+  <input ${attrs} ${type==='date'?'type="date"':'inputmode="decimal" class="n"'} value="${esc(val)}" placeholder="—">${unit?`<span class="u">${unit}</span>`:''}</span>
+  ${calcKey?`<span class="calc" data-out="${calcKey}"></span>`:''}</label>`;
+
+function vHoje(){
+  const dd=day(), c=calc();
+  const meter=(k,label,unit,color,big)=>`<div class="meter${big?' big':''}"><span class="lbl"><span class="dot" style="--c:${color}"></span>${label}</span>
+    <span class="v"><span data-out="t.${k}"></span> <small>/ <span data-out="m.${k}"></span> ${unit}</small></span>
+    <span class="bar" data-bar="${k}" style="--c:${color}"><i></i></span><span class="small muted" data-out="l.${k}"></span></div>`;
+  const meals=MEALS.map(([mk,ml])=>{const list=dd.entries.filter(x=>x.meal===mk);
+    return `<div class="card"><div class="meal-h"><h3>${ml}</h3><span class="tot"><b data-out="ml.${mk}.prot"></b> g proteína · <span class="num" data-out="ml.${mk}.kcal"></span> kcal</span></div>
+    ${list.length?`<div class="tscroll"><table><thead><tr><th>Alimento</th><th>Qtd (g)</th><th>kcal</th><th>Prot</th><th>Carb</th><th>Gord</th><th></th></tr></thead><tbody>
+    ${list.map(en=>{const m=entryMacros(en);return `<tr><td>${esc(m.nome)}</td><td><input class="n" data-entry="${en.id}" value="${esc(en.g)}" inputmode="decimal" aria-label="Quantidade em gramas"></td>
+      <td class="num" data-out="e.${en.id}.kcal"></td><td class="num p" data-out="e.${en.id}.prot"></td><td class="num" data-out="e.${en.id}.carb"></td><td class="num" data-out="e.${en.id}.gord"></td>
+      <td><button class="btn ghost" data-act="delEntry" data-id="${en.id}" aria-label="Remover">✕</button></td></tr>`}).join('')}
+    </tbody></table></div>`:`<div class="empty">Nada registrado.</div>`}</div>`}).join('');
+  return `<section class="sec">
+   <div class="row between"><div class="datenav">
+     <button class="btn sm" data-act="prevDay" aria-label="Dia anterior">◀</button>
+     <input type="date" id="dateSel" value="${ui.date}">
+     <button class="btn sm" data-act="nextDay" aria-label="Próximo dia">▶</button>
+     ${ui.date!==todayISO()?`<button class="btn sm" data-act="today">Hoje</button>`:''}</div>
+     <button class="btn sm" data-act="copyPrev">Copiar refeições do dia anterior</button></div>
+   ${!c.kcal?`<div class="notice">As metas aparecem quando você preencher peso, altura e idade (ou o exame completo) na aba <b>Bioimpedância</b>.</div>`:''}
+   <div class="meters">${meter('prot','Proteína','g','var(--prot)',1)}${meter('kcal','Calorias','kcal','var(--accent)')}${meter('carb','Carboidrato','g','var(--carb)')}${meter('gord','Gordura','g','var(--fat)')}${meter('fibra','Fibra','g','var(--fib)')}</div>
+   <div class="row small muted">Proteína do dia: <b class="num" style="color:var(--prot)" data-out="pkg"></b> g/kg de peso · <b class="num" style="color:var(--prot)" data-out="pmm"></b> g/kg de massa magra</div>
+   <div class="card"><h3>Adicionar alimento</h3>
+     <div class="addbar">
+      <label><span class="lbl">Refeição</span><select id="addMeal">${MEALS.map(([k,l])=>`<option value="${k}"${k===ui.lastMeal?' selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="wide"><span class="lbl">Alimento</span><input id="addFood" list="foodlist" placeholder="Digite para buscar…" autocomplete="off"></label>
+      <label><span class="lbl">Quantidade (g)</span><input id="addG" class="n" inputmode="decimal" placeholder="100"></label>
+      <button class="btn pri" data-act="addEntry">Adicionar</button>
+     </div>
+     <div class="small muted" id="addPreview"></div>
+     ${ui.msg?`<div class="notice">${ui.msg}</div>`:''}
+   </div>
+   ${meals}
+   <div class="card"><div class="meal-h"><h3>Água</h3><span class="tot"><span class="num" data-out="agua.t"></span> / <span class="num" data-out="agua.m"></span> ml</span></div>
+     <span class="bar" data-bar="agua" style="--c:var(--water)"><i></i></span>
+     <div class="row"><input id="agua" class="n" inputmode="decimal" value="${esc(dd.agua||'')}" style="width:110px" aria-label="Água em ml"> <span class="small muted">ml</span>
+     <button class="btn sm" data-act="agua" data-v="250">+250 ml</button><button class="btn sm" data-act="agua" data-v="500">+500 ml</button></div></div>
+   <div class="card"><table><tfoot><tr><td>Total do dia</td><td class="num"><span data-out="ft.kcal"></span> kcal</td><td class="num p"><span data-out="ft.prot"></span> g P</td><td class="num"><span data-out="ft.carb"></span> g C</td><td class="num"><span data-out="ft.gord"></span> g G</td></tr></tfoot></table></div>
+  </section>`;
+}
+
+function vBio(){
+  const s=P.settings, list=examsSorted();
+  if(!ui.exam||!P.exams.find(e=>e.id===ui.exam))ui.exam=(list[list.length-1]||{}).id;
+  const e=P.exams.find(x=>x.id===ui.exam);
+  const idx=list.indexOf(e), prev=idx>0?list[idx-1]:null;
+  const deltas=prev?[['peso','Peso','kg',-1],['gordPct','Gordura','%',-1],['magraKg','Massa magra','kg',1],['muscKg','Músculo','kg',1]].map(([k,l,u,dir])=>{
+    const a=k==='gordPct'?examDerived(prev).gp:k==='magraKg'?examDerived(prev).mm:num(prev[k]);
+    const b=k==='gordPct'?examDerived(e).gp:k==='magraKg'?examDerived(e).mm:num(e[k]);
+    if(a===null||b===null)return '';const d=b-a;const cls=d===0?'':(d*dir>0?'good':'bad');
+    return `<div><span class="lbl">${l}</span><b class="delta ${cls}">${d>0?'+':''}${fmt(d,1)} ${u}</b></div>`}).join(''):'';
+  return `<section class="sec">
+   <div class="card"><h2>Seu perfil</h2>
+    <div class="fgrid">
+     <label class="field"><span class="lbl">Sexo</span><span class="in"><select data-k="sexo"><option value="M"${s.sexo==='M'?' selected':''}>Masculino</option><option value="F"${s.sexo==='F'?' selected':''}>Feminino</option></select></span></label>
+     ${field('data-k="idade"',s.idade,'anos','Idade')}
+     ${field('data-k="altura"',s.altura,'cm','Altura')}
+    </div></div>
+   <div class="card">
+    <div class="row between"><h2>Exame de bioimpedância</h2><button class="btn sm pri" data-act="newExam">+ Novo exame</button></div>
+    <div class="chips">${list.map(x=>`<button class="chip" data-act="selExam" data-id="${x.id}" aria-pressed="${x.id===ui.exam}">${brDate(x.data)}</button>`).join('')}</div>
+    <p class="small muted" style="margin:0">Preencha o que o laudo trouxer. Campos vazios são ignorados; % de gordura, massa de gordura e massa magra se completam entre si.</p>
+    <div class="fgrid">
+     ${field(`data-ex="${e.id}" data-f="data"`,e.data,'','Data do exame','','date')}
+     ${EXF.map(([k,l,u])=>field(`data-ex="${e.id}" data-f="${k}"`,e[k]??'',u,l,k==='peso'?`x.${e.id}.imc`:k==='gordKg'?`x.${e.id}.gk`:k==='gordPct'?`x.${e.id}.gp`:k==='magraKg'?`x.${e.id}.mm`:'')).join('')}
+     ${(e.extras||[]).map(x=>`<div class="field"><input data-ex="${e.id}" data-x="${x.id}" data-xf="nome" value="${esc(x.nome)}" placeholder="Nome do campo" style="font-size:12px;font-weight:600">
+       <span class="in"><input data-ex="${e.id}" data-x="${x.id}" data-xf="valor" class="n" value="${esc(x.valor)}" placeholder="—"><input data-ex="${e.id}" data-x="${x.id}" data-xf="unid" value="${esc(x.unid)}" placeholder="un." style="max-width:64px">
+       <button class="btn ghost" data-act="delExtra" data-id="${x.id}" aria-label="Remover campo">✕</button></span></div>`).join('')}
+    </div>
+    <div><button class="btn sm" data-act="addExtra">+ Campo personalizado</button></div>
+    <label class="field"><span class="lbl">Observações</span><textarea data-ex="${e.id}" data-f="obs" placeholder="Ex.: medido em jejum, de manhã">${esc(e.obs)}</textarea></label>
+    ${deltas?`<div><span class="lbl">Mudança desde ${brDate(prev.data)}</span><div class="kv" style="margin-top:6px">${deltas}</div></div>`:''}
+    <div class="row">${ui.confirm===e.id?`<span class="small">Excluir o exame de ${brDate(e.data)}?</span><button class="btn sm danger" data-act="delExam" data-id="${e.id}">Confirmar exclusão</button><button class="btn sm" data-act="cancel">Cancelar</button>`
+      :`<button class="btn sm ghost" data-act="askDel" data-id="${e.id}">Excluir este exame</button>`}</div>
+   </div></section>`;
+}
+
+function vMetas(){
+  const s=P.settings;
+  return `<section class="sec">
+   <div class="notice" data-out="c.base"></div>
+   <div class="card"><h2>Suas metas diárias</h2>
+    <div class="kv">
+     <div><span class="lbl">Calorias</span><b class="num" data-out="c.kcal"></b><span class="small muted" data-out="c.def"></span></div>
+     <div><span class="lbl">Proteína (g)</span><b class="num p" data-out="c.prot"></b><span class="small muted" data-out="c.prot%"></span></div>
+     <div><span class="lbl">Carboidrato (g)</span><b class="num" data-out="c.carb"></b><span class="small muted" data-out="c.carb%"></span></div>
+     <div><span class="lbl">Gordura (g)</span><b class="num" data-out="c.gord"></b><span class="small muted" data-out="c.gord%"></span></div>
+     <div><span class="lbl">Água (litros)</span><b class="num" data-out="c.agua"></b></div>
+     <div><span class="lbl">Proteína por refeição</span><b class="num p" data-out="c.pref"></b><span class="small muted">g em <span data-out="c.refsTxt">${esc(s.refeicoes)}</span> refeições</span></div>
+    </div>
+    <div class="small muted"><span data-out="c.pkg"></span> · <span data-out="c.pkgmm"></span> · <span data-out="c.semana"></span></div>
+   </div>
+   <div class="grid2">
+   <div class="card"><h3>Gasto energético</h3>
+    <div class="kv"><div><span class="lbl">TMB (kcal)</span><b class="num" data-out="c.tmb"></b><span class="small muted" data-out="c.fonte"></span></div>
+    <div><span class="lbl">Gasto total (kcal)</span><b class="num" data-out="c.get"></b></div></div>
+    <label class="field"><span class="lbl">Nível de atividade</span><select data-k="atividade">${ATIV.map(([v,l])=>`<option value="${v}"${num(s.atividade)===v?' selected':''}>${l}</option>`).join('')}</select></label>
+    ${field('data-k="deficit"',s.deficit,'%','Déficit calórico')}
+    <p class="small muted" style="margin:0">Para perder gordura preservando músculo, 15–25% de déficit costuma funcionar bem.</p>
+   </div>
+   <div class="card"><h3>Macronutrientes</h3>
+    <div class="fgrid">
+     ${field('data-k="protGkg"',s.protGkg,'g/kg','Proteína')}
+     <label class="field"><span class="lbl">Calcular proteína sobre</span><span class="in"><select data-k="protBase"><option value="peso"${s.protBase==='peso'?' selected':''}>Peso total</option><option value="magra"${s.protBase==='magra'?' selected':''}>Massa magra</option></select></span></label>
+     ${field('data-k="gordGkg"',s.gordGkg,'g/kg','Gordura')}
+     ${field('data-k="fibraMeta"',s.fibraMeta,'g','Fibra')}
+     ${field('data-k="aguaMlkg"',s.aguaMlkg,'ml/kg','Água')}
+     ${field('data-k="refeicoes"',s.refeicoes,'','Refeições por dia')}
+    </div>
+    <p class="small muted" style="margin:0">Para ganhar massa magra em déficit: 1,6–2,2 g/kg de peso (ou 2,2–2,6 g/kg de massa magra). O carboidrato fica com as calorias restantes.</p>
+   </div>
+   <div class="card"><h3>Ajuste manual (opcional)</h3>
+    <p class="small muted" style="margin:0">Se seu nutricionista passou valores fixos, coloque aqui. Deixe vazio para usar o cálculo automático.</p>
+    <div class="fgrid">${field('data-k="kcalManual"',s.kcalManual,'kcal','Meta de calorias')}${field('data-k="protManual"',s.protManual,'g','Meta de proteína')}</div>
+   </div></div>
+   <p class="disc">Os cálculos usam fórmulas de referência (Katch-McArdle, Mifflin-St Jeor) e servem como ponto de partida. Ajuste com acompanhamento de um nutricionista.</p>
+  </section>`;
+}
+
+function vAlimentos(){
+  return `<section class="sec"><div class="card">
+   <div class="row between"><h2>Banco de alimentos</h2><div class="row"><input id="foodFilter" placeholder="Buscar…" value="${esc(ui.filter)}" style="width:180px"><button class="btn sm pri" data-act="newFood">+ Novo alimento</button></div></div>
+   <p class="small muted" style="margin:0">Valores por 100 g, aproximados (tabela TACO e rótulos comuns). Edite conforme a marca que você usa. A coluna “P/100 kcal” mostra quanto de proteína o alimento entrega por caloria.</p>
+   <div class="tscroll" id="foodTable">${foodRows()}</div></div></section>`;
+}
+function foodRows(){
+  const q=ui.filter.trim().toLowerCase();
+  const list=P.foods.filter(f=>!q||(f.nome||'').toLowerCase().includes(q));
+  return `<table><thead><tr><th>Alimento</th><th>Porção (g)</th><th>kcal</th><th>Prot</th><th>Carb</th><th>Gord</th><th>Fibra</th><th>P/100 kcal</th><th></th></tr></thead><tbody>
+   ${list.map(f=>`<tr><td><input class="t" data-food="${f.id}" data-f="nome" value="${esc(f.nome)}" aria-label="Nome"></td>
+   ${['porcao','kcal','prot','carb','gord','fibra'].map(k=>`<td><input class="n" data-food="${f.id}" data-f="${k}" value="${esc(f[k])}" inputmode="decimal" aria-label="${k}"></td>`).join('')}
+   <td class="num p" data-dens="${f.id}">${num(f.kcal)?fmt(num(f.prot)/num(f.kcal)*100,1):'—'}</td>
+   <td><button class="btn ghost" data-act="delFood" data-id="${f.id}" aria-label="Excluir">✕</button></td></tr>`).join('')}
+   </tbody></table>${list.length?'':'<div class="empty">Nenhum alimento encontrado.</div>'}`;
+}
+
+function lineChart(pts,unit,dec=1){
+  const W=320,H=150,L=8,R=8,T=18,B=24;
+  if(pts.length<2)return `<div class="empty">${pts.length?'Último: '+fmt(pts[0].y,dec)+' '+unit+'. ':''}Adicione mais um exame para ver a linha.</div>`;
+  const ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys),pad=(mx-mn)*.2||1,lo=mn-pad,hi=mx+pad;
+  const X=i=>L+i*(W-L-R)/(pts.length-1),Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  const d=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.y).toFixed(1)).join(' ');
+  const area=d+` L${X(pts.length-1)} ${H-B} L${X(0)} ${H-B} Z`;
+  const last=pts[pts.length-1];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img"><line class="gd" x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}"/>
+   <path class="ar" d="${area}"/><path class="ln" d="${d}"/>
+   ${pts.map((p,i)=>`<circle class="pt" cx="${X(i)}" cy="${Y(p.y)}" r="${i===pts.length-1?4.5:3}"/>`).join('')}
+   <text x="${X(pts.length-1)}" y="${Y(last.y)-9}" text-anchor="end">${fmt(last.y,dec)} ${unit}</text>
+   <text x="${X(0)}" y="${Y(pts[0].y)-9}" text-anchor="start">${fmt(pts[0].y,dec)}</text>
+   <text x="${L}" y="${H-6}">${shortDate(pts[0].x)}</text><text x="${W-R}" y="${H-6}" text-anchor="end">${shortDate(last.x)}</text></svg>`;
+}
+function barChart(){
+  const c=calc(),W=640,H=170,L=30,R=8,T=12,B=24,n=14;
+  const days=[...Array(n)].map((_,i)=>addDays(ui.date,i-n+1));
+  const vals=days.map(d=>DAYS[d]?sumEntries(DAYS[d].entries).prot:0);
+  const mx=Math.max(c.prot||0,...vals,50)*1.1;
+  const bw=(W-L-R)/n, Y=v=>T+(1-v/mx)*(H-T-B);
+  const ticks=[0,Math.round(mx/2),Math.round(mx*.95)];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">
+   ${ticks.map(t=>`<line class="gd" x1="${L}" x2="${W-R}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${L-4}" y="${Y(t)+4}" text-anchor="end">${t}</text>`).join('')}
+   ${vals.map((v,i)=>v?`<rect class="bp" x="${L+i*bw+bw*.18}" y="${Y(v)}" width="${bw*.64}" height="${Y(0)-Y(v)}" rx="2"/>`:'').join('')}
+   ${c.prot?`<line class="meta" x1="${L}" x2="${W-R}" y1="${Y(c.prot)}" y2="${Y(c.prot)}"/>`:''}
+   ${days.map((d,i)=>i%2===n%2?'':`<text x="${L+i*bw+bw/2}" y="${H-6}" text-anchor="middle">${shortDate(d)}</text>`).join('')}</svg>`;
+}
+function vEvolucao(){
+  const l=examsSorted().filter(e=>num(e.peso)||num(e.gordPct)||num(e.magraKg));
+  const ser=f=>l.map(e=>({x:e.data,y:f(e)})).filter(p=>p.y!==null&&p.y!==undefined&&isFinite(p.y));
+  const box=(t,pts,u,d)=>`<div class="card chart"><h3>${t}</h3>${lineChart(pts,u,d)}</div>`;
+  return `<section class="sec">
+   <div class="card chart"><div class="row between"><h3>Proteína nos últimos 14 dias</h3><div class="legend"><span><span class="dot" style="--c:var(--prot)"></span>consumido (g)</span><span>- - meta</span></div></div>${barChart()}</div>
+   <div class="grid2">
+    ${box('Peso',ser(e=>num(e.peso)),'kg',1)}
+    ${box('Gordura corporal',ser(e=>examDerived(e).gp),'%',1)}
+    ${box('Massa magra',ser(e=>examDerived(e).mm),'kg',1)}
+    ${box('Massa muscular esquelética',ser(e=>num(e.muscKg)),'kg',1)}
+   </div>
+   ${l.length?'':'<div class="notice">Os gráficos de composição corporal aparecem quando você registrar exames na aba Bioimpedância.</div>'}
+  </section>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===ui.tab));
+  const v={hoje:vHoje,bio:vBio,metas:vMetas,alimentos:vAlimentos,evolucao:vEvolucao}[ui.tab]||vHoje;
+  $('#app').innerHTML=v();
+  $('#foodlist').innerHTML=P.foods.map(f=>`<option value="${esc(f.nome)}"></option>`).join('');
+  refresh();
+}
+
+/* ---------- eventos ---------- */
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ui.tab=b.dataset.tab;ui.confirm=null;ui.msg='';
+  try{localStorage.setItem('pf_tab',ui.tab)}catch(err){} render(); window.scrollTo(0,0)});
+
+const app=$('#app');
+app.addEventListener('input',e=>{
+  const t=e.target, ds=t.dataset;
+  if(ds.k){P.settings[ds.k]=t.value;savePerfil();refresh();return}
+  if(ds.ex){const ex=P.exams.find(x=>x.id===ds.ex);if(!ex)return;
+    if(ds.x){const x=ex.extras.find(z=>z.id===ds.x);if(x)x[ds.xf]=t.value}else ex[ds.f]=t.value;
+    savePerfil();refresh();return}
+  if(ds.food){const f=foodById(ds.food);if(!f)return;f[ds.f]=ds.f==='nome'?t.value:t.value;
+    const dc=app.querySelector(`[data-dens="${f.id}"]`);if(dc)dc.textContent=num(f.kcal)?fmt((num(f.prot)||0)/num(f.kcal)*100,1):'—';
+    savePerfil();return}
+  if(ds.entry){const en=day().entries.find(x=>x.id===ds.entry);if(en){en.g=t.value;saveDay();refresh()}return}
+  if(t.id==='agua'){day().agua=num(t.value)||0;saveDay();refresh();return}
+  if(t.id==='foodFilter'){ui.filter=t.value;$('#foodTable').innerHTML=foodRows();return}
+  if(t.id==='addFood'||t.id==='addG'){preview()}
+});
+app.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='dateSel'&&t.value){ui.date=t.value;render()}
+  if(t.dataset.ex&&t.dataset.f==='data')render();
+  if(t.dataset.food&&t.dataset.f==='nome')$('#foodlist').innerHTML=P.foods.map(f=>`<option value="${esc(f.nome)}"></option>`).join('');
+  if(t.id==='addFood'){const f=findFood(t.value);const g=$('#addG');if(f&&g&&!g.value){g.placeholder=f.porcao||100}preview()}
+});
+app.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='addFood'||e.target.id==='addG')){e.preventDefault();act('addEntry')}});
+app.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(b.dataset.act,b.dataset)});
+
+function findFood(name){const n=(name||'').trim().toLowerCase();return n?P.foods.find(f=>(f.nome||'').toLowerCase()===n):null}
+function preview(){
+  const el=$('#addPreview');if(!el)return;const f=findFood($('#addFood').value);
+  if(!f){el.textContent='';return}
+  const g=num($('#addG').value)||num(f.porcao)||100,k=g/100;
+  el.innerHTML=`${fmt(g)} g → <b class="num" style="color:var(--prot)">${fmt((num(f.prot)||0)*k,1)} g proteína</b> · ${fmt((num(f.kcal)||0)*k)} kcal · ${fmt((num(f.carb)||0)*k,1)} g carb · ${fmt((num(f.gord)||0)*k,1)} g gord`;
+}
+
+function act(a,d={}){
+  if(a==='addEntry'){
+    const name=$('#addFood').value, f=findFood(name), meal=$('#addMeal').value;
+    if(!name.trim()){ui.msg='Escolha um alimento da lista.';render();return}
+    if(!f){ui.msg=`“${esc(name)}” ainda não está no banco. <button class="btn sm" data-act="createFood" data-n="${esc(name)}">Cadastrar agora</button>`;render();$('#addFood').value=name;return}
+    const g=num($('#addG').value)||num(f.porcao)||100;
+    day().entries.push({id:uid(),meal,foodId:f.id,nome:f.nome,g,per:{kcal:f.kcal,prot:f.prot,carb:f.carb,gord:f.gord,fibra:f.fibra}});
+    ui.lastMeal=meal;ui.msg='';saveDay();render();const i=$('#addFood');if(i)i.focus();return}
+  if(a==='createFood'){const f={id:uid(),nome:d.n,porcao:100,kcal:'',prot:'',carb:'',gord:'',fibra:''};P.foods.unshift(f);savePerfil();
+    ui.msg='';ui.tab='alimentos';ui.filter=d.n;render();const inp=app.querySelector(`[data-food="${f.id}"][data-f="kcal"]`);if(inp)inp.focus();return}
+  if(a==='delEntry'){const dd=day();dd.entries=dd.entries.filter(x=>x.id!==d.id);saveDay();render();return}
+  if(a==='prevDay'){ui.date=addDays(ui.date,-1);ui.msg='';render();return}
+  if(a==='nextDay'){ui.date=addDays(ui.date,1);ui.msg='';render();return}
+  if(a==='today'){ui.date=todayISO();render();return}
+  if(a==='copyPrev'){
+    let src=null;for(let i=1;i<=30;i++){const k=addDays(ui.date,-i);if(DAYS[k]&&DAYS[k].entries.length){src=DAYS[k];break}}
+    if(!src){ui.msg='Não achei refeições nos 30 dias anteriores.';render();return}
+    day().entries.push(...src.entries.map(x=>Object.assign({},x,{id:uid()})));ui.msg='';saveDay();render();return}
+  if(a==='agua'){const dd=day();dd.agua=(num(dd.agua)||0)+num(d.v);saveDay();render();return}
+  if(a==='newExam'){const prev=latestExam();const ex=newExam();P.exams.push(ex);ui.exam=ex.id;savePerfil();render();return}
+  if(a==='selExam'){ui.exam=d.id;ui.confirm=null;render();return}
+  if(a==='askDel'){ui.confirm=d.id;render();return}
+  if(a==='cancel'){ui.confirm=null;render();return}
+  if(a==='delExam'){P.exams=P.exams.filter(x=>x.id!==d.id);if(!P.exams.length)P.exams.push(newExam());ui.exam=null;ui.confirm=null;savePerfil();render();return}
+  if(a==='addExtra'){const ex=P.exams.find(x=>x.id===ui.exam);(ex.extras=ex.extras||[]).push({id:uid(),nome:'',valor:'',unid:''});savePerfil();render();return}
+  if(a==='delExtra'){const ex=P.exams.find(x=>x.id===ui.exam);ex.extras=ex.extras.filter(x=>x.id!==d.id);savePerfil();render();return}
+  if(a==='newFood'){const f={id:uid(),nome:'',porcao:100,kcal:'',prot:'',carb:'',gord:'',fibra:''};P.foods.unshift(f);ui.filter='';savePerfil();render();
+    const inp=app.querySelector(`[data-food="${f.id}"][data-f="nome"]`);if(inp)inp.focus();return}
+  if(a==='delFood'){P.foods=P.foods.filter(x=>x.id!==d.id);savePerfil();$('#foodTable').innerHTML=foodRows();return}
+}
+
+store.loadLocal();
+render();
+store.init();
+})();
+</script>
+</body>
+</html>
